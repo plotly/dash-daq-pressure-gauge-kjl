@@ -18,7 +18,7 @@ from dash_daq import Gauge, StopButton, PowerButton, Indicator, \
     DarkThemeProvider
 from dash.dependencies import Output
 
-from generic_instruments import Instrument, INTF_SERIAL
+from .generic_instruments import Instrument, INTF_SERIAL
 
 RESPONSE_BIT_NUM = 13
 GAUGE_TYPES = ['CG', 'IG', 'AI']
@@ -288,6 +288,39 @@ class MGC4000(Instrument):
                     'background': bkg_color
                 }
             )
+
+    def measure(self, instr_param):
+        if instr_param in self.measure_params:
+            # method to check the type and id of the gauge
+            gtype, n = self.check_is_gauge(instr_param)
+            if self.mock_mode:
+                answer = 10 * np.random.random()
+            else:
+                if n is not None:
+                    if self.is_gauge_ready(gtype, n):
+                        answer = float(self.ask('#  RD%s%i' % (gtype, n)))
+                    else:
+                        print("gauge is not ready")
+                        answer = np.nan
+                else:
+                    answer = np.nan
+            self.last_measure[instr_param] = answer
+            self.measured_data[instr_param].append(
+                self.last_measure[instr_param]
+            )
+            # store the time at which the data was taken
+            self.measured_data['%s_time' % instr_param].append(
+                datetime.datetime.now()
+            )
+        else:
+            print(
+                "you are trying to measure a non existent instr_param : "
+                + instr_param
+            )
+            print("existing instr_params :", self.measure_params)
+            answer = np.nan
+
+        return answer
 
     def read(self, num_bytes=RESPONSE_BIT_NUM):
 
