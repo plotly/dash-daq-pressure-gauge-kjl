@@ -23,6 +23,7 @@ pressure_gauge = MGC4000(mock=True)
 # set the gauge inside the lab's instrument rack
 instrument_rack = [pressure_gauge]
 
+
 # Create controls using a function
 def generate_lab_layout(instr_list, theme='light'):
     """generate the layout of the app from a list of instruments"""
@@ -104,7 +105,7 @@ def generate_lab_layout(instr_list, theme='light'):
 
 This is an app to show the graphic elements of Dash DAQ used to create an
 interface for the pressure gauges from Kurt J. Lesker multi gauges controller
-MGC4000. This mock demo does not actually connect to a physical instrument 
+MGC4000. This mock demo does not actually connect to a physical instrument
 the values displayed are generated randomly for demonstration purposes.
 
 **How to use the app**

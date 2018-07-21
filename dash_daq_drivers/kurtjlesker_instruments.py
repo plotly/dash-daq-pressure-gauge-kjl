@@ -38,6 +38,7 @@ CG cable unplugged',
     '?01 SYNTX ER': 'Unknown command'
 }
 
+
 def make_gauge_callback(name, instr, app, inputs):
     """generate a callback for the gauges which number can vary from instrument
         to instrument
@@ -349,7 +350,7 @@ class MGC4000(Instrument):
         if n is None:
             gtype, n = self.check_is_gauge(gtype)
 
-        answer = i.ask('#  RS%s%i' % (gtype, n))
+        answer = self.ask('#  RS%s%i' % (gtype, n))
 
         if answer in STATUS:
             return STATUS[answer]

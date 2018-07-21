@@ -74,44 +74,6 @@ class Instrument(object):
             # pyvisa version > 1.6
             self.rm = visa.ResourceManager()
 
-        if self.instr_intf == INTF_PROLOGIX and not self.mock_mode:
-            # there is only one COM port that the prologix has, then we go
-            # through that for all GPIB communications
-
-            if INTF_PROLOGIX in kwargs:
-
-                # the connection is passed as an argument
-                if isinstance(kwargs[INTF_PROLOGIX], str):
-                    # if it was the COM PORT number we initiate an instance
-                    # of prologix controller
-                    if "COM" in kwargs[INTF_PROLOGIX]:
-                        if 'auto' in kwargs:
-                            self.instr_connexion = PrologixController(
-                                kwargs[INTF_PROLOGIX],
-                                auto=kwargs['auto']
-                            )
-                        else:
-                            self.instr_connexion = PrologixController(
-                                kwargs[INTF_PROLOGIX]
-                            )
-
-                else:
-                    # it was the PrologixController instance
-                    self.instr_connexion = kwargs[INTF_PROLOGIX]
-
-                    if "Prologix GPIB-USB Controller" \
-                            in self.instr_connexion.controller_id():
-                        pass
-                    else:
-                        print(
-                            "The controller passed as an argument is not "
-                            "the good one"
-                        )
-
-            else:
-                # the connection doesn't exist so we create it
-                self.instr_connexion = PrologixController()
-
         if not self.mock_mode and instr_port_name is not 'default':
             self.connect(instr_port_name, **kwargs)
 
