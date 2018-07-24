@@ -7,3 +7,4 @@ dash-core-components
 dash_daq-0.0.3.tar.gz
 pyserial
 pyvisa
+gunicorn
