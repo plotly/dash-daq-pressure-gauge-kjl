@@ -18,7 +18,7 @@ grid_color = {'dark': 'white', 'light': '#C8D4E3'}
 text_color = {'dark': 'white', 'light': '#506784'}
 
 # create a pressure gauge
-pressure_gauge = MGC4000(mock=True)
+pressure_gauge = MGC4000(mock=False)
 
 # set the gauge inside the lab's instrument rack
 instrument_rack = [pressure_gauge]
@@ -444,4 +444,4 @@ def update_graph(
 # In[]:
 # Main
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)
