@@ -20,7 +20,7 @@ class Instrument(object):
 
     def __init__(
         self,
-        instr_port_name='default',
+        instr_port_name='',
         instr_id_name='default',
         instr_user_name='default',
         mock_mode=False,
@@ -59,7 +59,7 @@ class Instrument(object):
         self.instr_intf = instr_intf
         # connexion handle
         self.instr_connexion = None
-        # terminaison characters used to communicate with the instrument
+        # termination characters used to communicate with the instrument
         self.term_chars = ""
 
         for param in instr_mesurands:
@@ -74,11 +74,12 @@ class Instrument(object):
             # pyvisa version > 1.6
             self.rm = visa.ResourceManager()
 
-        if not self.mock_mode and instr_port_name is not 'default':
+        if not self.mock_mode and instr_port_name is not '':
             self.connect(instr_port_name, **kwargs)
 
     def __str__(self):
         """returns display name for instrument"""
+
         return "%s" % self.instr_user_name
 
     def unique_id(self):
@@ -150,8 +151,9 @@ with the instrument %s" % self.instr_id_name))
     def connect(self, instr_port_name=None, **kwargs):
         """implements the connexion to the instrument"""
 
-        if instr_port_name is not None:
+        if instr_port_name is None:
             instr_port_name = self.instr_port_name
+
         if self.mock_mode:
             print(
                 "Connect %s, named %s on port %s, with %s"
@@ -167,7 +169,7 @@ with the instrument %s" % self.instr_id_name))
             if self.instr_intf == INTF_VISA:
                 # make sure the instrument is not already connected
                 self.disconnect()
-                # connects through the ressource manager (rm)
+                # connects through the resource manager (rm)
                 self.instr_connexion = self.rm.open_resource(
                     instr_port_name, **kwargs)
             elif self.instr_intf == INTF_SERIAL:

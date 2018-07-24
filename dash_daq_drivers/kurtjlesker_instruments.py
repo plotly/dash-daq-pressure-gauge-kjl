@@ -132,7 +132,7 @@ class MGC4000(Instrument):
 
         # a button which will initiate the connexion to the instrument
         self.connexion_button = StopButton(
-            id='%s_instr_port' % (self.unique_id()),
+            id='%s_instr_port_btn' % (self.unique_id()),
             children='Connect',
             buttonText='Connect',
             disabled=True
@@ -145,8 +145,7 @@ class MGC4000(Instrument):
 
         self.mock_indicator = Indicator(
             id='%s_mock_indicator' % (self.unique_id()),
-            value=self.mock_mode,
-            color='#00cc96'
+            value=self.mock_mode
         )
 
         # create the interface of the instrument

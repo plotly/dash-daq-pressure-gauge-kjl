@@ -24,6 +24,17 @@ pressure_gauge = MGC4000(mock=True)
 instrument_rack = [pressure_gauge]
 
 
+def is_instrument_port(port_name):
+    """test if a string can be a com of gpib port"""
+    answer = False
+    if isinstance(port_name, str):
+        ports = ['COM', 'com', 'GPIB0::', 'gpib0::']
+        for port in ports:
+            if port in port_name:
+                answer = not (port == port_name)
+    return answer
+
+
 # Create controls using a function
 def generate_lab_layout(instr_list, theme='light'):
     """generate the layout of the app from a list of instruments"""
@@ -40,12 +51,14 @@ def generate_lab_layout(instr_list, theme='light'):
                 html.Div(
                     [
                         html.Div(
-                            rack,
+                            id='instrument-rack',
+                            children=rack,
                             style={'width': '100%'}
                         ),
                         # Control panel for the data acquisition
                         html.Div(
-                            [
+                            id='measure-div',
+                            children=[
                                 StopButton(
                                     id='measureButton',
                                     buttonText='Start'
@@ -190,7 +203,8 @@ root_layout = html.Div(
 app = dash.Dash('')
 server = app.server
 app.css.append_css(
-    {'external_url': 'https://codepen.io/bachibouzouk/pen/dKJyoK.css'})
+    {'external_url': 'https://codepen.io/bachibouzouk/pen/dKJyoK.css'}
+)
 
 app.config.suppress_callback_exceptions = False
 app.scripts.config.serve_locally = True
@@ -243,14 +257,132 @@ def change_measure_btn_label(is_measuring):
 
 
 @app.callback(
+    Output('%s_controls_div' % pressure_gauge.unique_id(), 'style'),
+    [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')],
+    [State('%s_controls_div' % pressure_gauge.unique_id(), 'style')],
+)
+def grey_out_controls_div(pwr_status, style_dict):
+    answer = style_dict
+    if pwr_status:
+        answer['opacity'] = 1
+    else:
+        answer['opacity'] = 0.3
+    return answer
+
+
+@app.callback(
+    Output('%s_gauges_div' % pressure_gauge.unique_id(), 'style'),
+    [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')],
+    [State('%s_gauges_div' % pressure_gauge.unique_id(), 'style')],
+)
+def grey_out_gauges_div(pwr_status, style_dict):
+    answer = style_dict
+    if pwr_status:
+        answer['opacity'] = 1
+    else:
+        answer['opacity'] = 0.3
+    return answer
+
+
+@app.callback(
+    Output('measure-div', 'style'),
+    [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')],
+    [State('measure-div', 'style')],
+)
+def grey_out_measuring_div(pwr_status, style_dict):
+    answer = style_dict
+    if pwr_status:
+        answer['opacity'] = 1
+    else:
+        answer['opacity'] = 0.3
+    return answer
+
+
+@app.callback(
+    Output('measureButton', 'disabled'),
+    [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')]
+)
+def enable_measure_btn(pwr_status):
+    return not pwr_status
+
+
+@app.callback(
+    Output('%s_instr_port' % pressure_gauge.unique_id(), 'value'),
+    [
+        Input('%s_power_button' % pressure_gauge.unique_id(), 'on'),
+        Input('interval', 'n_intervals')
+    ],
+    [
+        State('%s_instr_port' % (pressure_gauge.unique_id()), 'value'),
+        State('%s_instr_port' % (pressure_gauge.unique_id()), 'placeholder')
+    ]
+)
+def instrument_port_prevent_reset(pwr_status, n_intervals, text, placeholder):
+    """prevents the input box's value to be reset by dcc.Interval"""
+    if pwr_status:
+        return text
+    else:
+        return placeholder
+
+
+@app.callback(
+    Output('%s_instr_port' % pressure_gauge.unique_id(), 'disabled'),
+    [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')],
+)
+def enable_instrument_port_input(pwr_status):
+    return not pwr_status
+
+
+@app.callback(
+    Output('%s_instr_port_btn' % pressure_gauge.unique_id(), 'disabled'),
+    [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')],
+    [
+        State('%s_instr_port' % (pressure_gauge.unique_id()), 'value'),
+        State('%s_instr_port' % (pressure_gauge.unique_id()), 'placeholder')
+    ],
+    [Event('%s_instr_port' % pressure_gauge.unique_id(), 'change')]
+)
+def instrument_port_btn_update(pwr_status, text, placeholder):
+    """enable or disable the connect button depending on the port name"""
+    answer = True
+
+    if text != placeholder:
+        if is_instrument_port(text):
+            answer = not pwr_status
+    return answer
+
+
+@app.callback(
+    Output('%s_instr_port_btn' % pressure_gauge.unique_id(), 'n_clicks'),
+    [],
+    [State('%s_instr_port' % (pressure_gauge.unique_id()), 'value')],
+    [Event('%s_instr_port_btn' % pressure_gauge.unique_id(), 'click')]
+)
+def instrument_port_btn_click(text):
+    """reconnect the instrument to the new com port"""
+    pressure_gauge.connect(text)
+    return 0
+
+
+@app.callback(
     Output('graph', 'figure'),
     [
         Input('interval', 'n_intervals'),
         Input('measuring', 'value'),
         Input('%s_channel' % (pressure_gauge.unique_id()), 'value'),
         Input('toggleTheme', 'value')
-    ])
-def update_graph(n_interval, is_measuring, selected_params, is_dark_theme):
+    ],
+    [
+        State('%s_power_button' % pressure_gauge.unique_id(), 'on')
+    ]
+)
+def update_graph(
+    n_interval,
+    is_measuring,
+    selected_params,
+    is_dark_theme,
+    pwr_status
+):
 
     if is_dark_theme:
         theme = 'dark'
@@ -258,33 +390,32 @@ def update_graph(n_interval, is_measuring, selected_params, is_dark_theme):
         theme = 'light'
     # here one should write the script of what the instrument do
     data_for_graph = []
-    for instr in instrument_rack:
 
-        # triggers the measure on the selected channels
-        if is_measuring:
-            for instr_channel in selected_params:
-                instr.measure(instr_param='%s' % instr_channel)
+    if pwr_status and is_measuring:
+        for instr in instrument_rack:
 
-        # collects the data measured by all channels to update the graph
-        for instr_chan in selected_params:
+            # triggers the measure on the selected channels
+            if is_measuring:
+                for instr_channel in selected_params:
+                    instr.measure(instr_param='%s' % instr_channel)
 
-            idx_gauge = instr.measure_params.index(instr_chan)
+            # collects the data measured by all channels to update the graph
+            for instr_chan in selected_params:
 
-            if instr.measured_data[instr_chan]:
-                xdata = 1000*instr.measured_data['%s_time' % instr_chan]
-                ydata = instr.measured_data[instr_chan]
-                data_for_graph.append(
-                    go.Scatter(
-                        x=xdata,
-                        y=ydata,
-                        mode='lines+markers',
-                        name='%s:%s' % (instr, instr_chan),
-                        line={
-                            'color': line_colors[idx_gauge],
-                            'width': 2
-                        }
+                if instr.measured_data[instr_chan]:
+                    xdata = 1000*instr.measured_data['%s_time' % instr_chan]
+                    ydata = instr.measured_data[instr_chan]
+                    data_for_graph.append(
+                        go.Scatter(
+                            x=xdata,
+                            y=ydata,
+                            mode='lines+markers',
+                            name='%s:%s' % (instr, instr_chan),
+                            line={
+                                'width': 2
+                            }
+                        )
                     )
-                )
 
     return {
         'data': data_for_graph,
@@ -313,4 +444,4 @@ def update_graph(n_interval, is_measuring, selected_params, is_dark_theme):
 # In[]:
 # Main
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)
