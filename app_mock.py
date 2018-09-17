@@ -285,6 +285,20 @@ def grey_out_gauges_div(pwr_status, style_dict):
 
 
 @app.callback(
+    Output('%s_gauges_list' % pressure_gauge.unique_id(), 'style'),
+    [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')],
+    [State('%s_gauges_list' % pressure_gauge.unique_id(), 'style')],
+)
+def grey_out_gauges_div(pwr_status, style_dict):
+    answer = style_dict
+    if pwr_status:
+        answer['opacity'] = 1
+    else:
+        answer['opacity'] = 0.3
+    return answer
+
+
+@app.callback(
     Output('measure-div', 'style'),
     [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')],
     [State('measure-div', 'style')],
@@ -403,7 +417,7 @@ def update_graph(
             for instr_chan in selected_params:
 
                 if instr.measured_data[instr_chan]:
-                    xdata = 1000*instr.measured_data['%s_time' % instr_chan]
+                    xdata = 1000 * instr.measured_data['%s_time' % instr_chan]
                     ydata = instr.measured_data[instr_chan]
                     data_for_graph.append(
                         go.Scatter(

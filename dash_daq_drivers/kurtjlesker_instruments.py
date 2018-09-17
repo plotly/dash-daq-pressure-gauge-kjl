@@ -246,7 +246,7 @@ class MGC4000(Instrument):
                 children=[
                     html.Div(
                         self.gauge_list,
-                        id='%s_gauges_div' % self.unique_id(),
+                        id='%s_gauges_list' % self.unique_id(),
                         style={
                             'display': 'flex',
                             'flexDirection': 'row',
