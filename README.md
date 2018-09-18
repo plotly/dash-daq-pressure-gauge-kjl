@@ -4,7 +4,7 @@
 `dash-daq-pressure-gauge-kjl` is a repository created to interface Kurt J. Lesker pressure gauges controllers with dash DAQ.
 
 1. Kurt. J. Lesker MGC4000 multi-gauge controller
-[Demo app on Heroku](https://dash-daq-pressure-gauge-kjl.herokuapp.com/), and dashdaq.io [blog post](https://www.dashdaq.io/read-pressure-from-kurt-j-lesker-gauge-controller-in-python)
+[Demo app on DDS](https://dash-gallery.plotly.host/dash-daq-pressure-gauge-kjl/), and dashdaq.io [blog post](https://www.dashdaq.io/read-pressure-from-kurt-j-lesker-gauge-controller-in-python)
 
 ### [Technique/field associated with the instrument]
 Low pressure gauges (1 atmosphere and below) are used in vacuum environments. 
