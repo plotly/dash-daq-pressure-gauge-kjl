@@ -1,27 +1,39 @@
 # In[]:
 # Import required libraries
 import dash
+from dash.dependencies import Input, Output, State
 import dash_html_components as html
 import dash_core_components as dcc
-from dash.dependencies import Input, Output, State, Event
 from dash_daq import StopButton, Indicator, DarkThemeProvider, ToggleSwitch
 import plotly.graph_objs as go
 
 from dash_daq_drivers.kurtjlesker_instruments import MGC4000
 
 # line colors
-line_colors = ['#19d3f3', '#e763fa', '#00cc96', '#EF553B']
+LINE_COLORS = ['#19d3f3', '#e763fa', '#00cc96', '#EF553B']
 
 # font and background colors associated with each themes
-bkg_color = {'dark': '#2a3f5f', 'light': '#F3F6FA'}
-grid_color = {'dark': 'white', 'light': '#C8D4E3'}
-text_color = {'dark': 'white', 'light': '#506784'}
+BKG_COLOR = {'dark': '#2a3f5f', 'light': '#F3F6FA'}
+GRID_COLOR = {'dark': 'white', 'light': '#C8D4E3'}
+TEXT_COLOR = {'dark': 'white', 'light': '#506784'}
 
 # create a pressure gauge
-pressure_gauge = MGC4000(mock=False)
+PRESSURE_GAUGE = MGC4000(mock=False)
 
 # set the gauge inside the lab's instrument rack
-instrument_rack = [pressure_gauge]
+INSTRUMENT_RACK = [PRESSURE_GAUGE]
+
+
+def grey_out(style_dict, pwr_status):
+    if style_dict is None:
+        answer = {}
+    else:
+        answer = style_dict
+    if pwr_status:
+        answer['opacity'] = 1
+    else:
+        answer['opacity'] = 0.3
+    return answer
 
 
 def is_instrument_port(port_name):
@@ -47,6 +59,12 @@ def generate_lab_layout(instr_list, theme='light'):
     html_layout = [
         html.Div(
             [
+                # This div is used as a an output of a callback which wouldn't need output
+                html.Div(
+                    id='event-output-div',
+                    children='',
+                    style={'display': 'none'}
+                ),
                 # Instruments are in the instrument rack
                 html.Div(
                     [
@@ -54,6 +72,12 @@ def generate_lab_layout(instr_list, theme='light'):
                             id='instrument-rack',
                             children=rack,
                             style={'width': '100%'}
+                        ),
+                        # This div is used as a an output of a callback which wouldn't need output
+                        html.Div(
+                            id='event-output-div',
+                            children='',
+                            style={'display': 'none'}
                         ),
                         # Control panel for the data acquisition
                         html.Div(
@@ -96,10 +120,10 @@ def generate_lab_layout(instr_list, theme='light'):
                             figure={
                                 'data': [],
                                 'layout': dict(
-                                    paper_bgcolor=bkg_color[theme],
-                                    plot_bgcolor=bkg_color[theme],
+                                    paper_bgcolor=BKG_COLOR[theme],
+                                    plot_bgcolor=BKG_COLOR[theme],
                                     font=dict(
-                                        color=text_color[theme],
+                                        color=TEXT_COLOR[theme],
                                         size=15,
                                     )
                                 )
@@ -145,8 +169,8 @@ dashdaq.io](https://www.dashdaq.io/)''')
                 'flexDirection': 'column',
                 'alignItems': 'center',
                 'justifyContent': 'center',
-                'color': text_color[theme],
-                'background': bkg_color[theme]
+                'color': TEXT_COLOR[theme],
+                'background': BKG_COLOR[theme]
             }
         )
     ]
@@ -193,7 +217,7 @@ root_layout = html.Div(
         ),
         html.Div(
             id='page-content',
-            children=generate_lab_layout(instrument_rack),
+            children=generate_lab_layout(INSTRUMENT_RACK),
             style={'width': '100%'}
         ),
     ]
@@ -216,7 +240,7 @@ app.layout = root_layout
 # In[]:
 # Create callbacks
 # generate the callbacks between the instrument and the app
-for instr in instrument_rack:
+for instr in INSTRUMENT_RACK:
     instr.generate_callbacks(
         app,
         inputs=[Input('interval', 'n_intervals')]
@@ -228,93 +252,78 @@ for instr in instrument_rack:
               [Input('toggleTheme', 'value')])
 def page_layout(value):
     if value:
-        return generate_lab_layout(instrument_rack, 'dark')
+        return generate_lab_layout(INSTRUMENT_RACK, 'dark')
     else:
-        return generate_lab_layout(instrument_rack, 'light')
+        return generate_lab_layout(INSTRUMENT_RACK, 'light')
 
 
 @app.callback(
     Output('measuring', 'value'),
-    [],
-    [State('measuring', 'value')],
-    [Event('measureButton', 'click')]
+    [Input('measureButton', 'n_clicks')],
+    [State('measuring', 'value')]
 )
-def trigger_measure(is_measuring):
-    return not is_measuring
+def trigger_measure(n_clicks, is_measuring):
+    if n_clicks is None:
+        return is_measuring
+    else:
+        return not is_measuring
 
 
 @app.callback(
     Output('measureButton', 'buttonText'),
-    [],
-    [State('measuring', 'value')],
-    [Event('measureButton', 'click')]
+    [Input('measureButton', 'n_clicks')],
+    [State('measuring', 'value')]
 )
-def change_measure_btn_label(is_measuring):
-    if is_measuring:
-        return 'Start'
-    else:
-        return 'Stop'
+def change_measure_btn_label(n_clicks, is_measuring):
+    answer = 'Start'
+
+    if n_clicks is not None:
+        if not is_measuring:
+            answer = 'Stop'
+    return answer
 
 
 @app.callback(
-    Output('%s_controls_div' % pressure_gauge.unique_id(), 'style'),
-    [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')],
-    [State('%s_controls_div' % pressure_gauge.unique_id(), 'style')],
+    Output('%s_controls_div' % PRESSURE_GAUGE.unique_id(), 'style'),
+    [Input('%s_power_button' % PRESSURE_GAUGE.unique_id(), 'on')],
+    [State('%s_controls_div' % PRESSURE_GAUGE.unique_id(), 'style')],
 )
 def grey_out_controls_div(pwr_status, style_dict):
-    answer = style_dict
-    if pwr_status:
-        answer['opacity'] = 1
-    else:
-        answer['opacity'] = 0.3
-    return answer
-
+    grey_out(style_dict, pwr_status)
 
 @app.callback(
-    Output('%s_gauges_div' % pressure_gauge.unique_id(), 'style'),
-    [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')],
-    [State('%s_gauges_div' % pressure_gauge.unique_id(), 'style')],
+    Output('%s_gauges_div' % PRESSURE_GAUGE.unique_id(), 'style'),
+    [Input('%s_power_button' % PRESSURE_GAUGE.unique_id(), 'on')],
+    [State('%s_gauges_div' % PRESSURE_GAUGE.unique_id(), 'style')],
 )
 def grey_out_gauges_div(pwr_status, style_dict):
-    answer = style_dict
-    if pwr_status:
-        answer['opacity'] = 1
-    else:
-        answer['opacity'] = 0.3
-    return answer
-
+    grey_out(style_dict, pwr_status)
 
 @app.callback(
     Output('measure-div', 'style'),
-    [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')],
+    [Input('%s_power_button' % PRESSURE_GAUGE.unique_id(), 'on')],
     [State('measure-div', 'style')],
 )
 def grey_out_measuring_div(pwr_status, style_dict):
-    answer = style_dict
-    if pwr_status:
-        answer['opacity'] = 1
-    else:
-        answer['opacity'] = 0.3
-    return answer
-
+    grey_out(style_dict, pwr_status)
 
 @app.callback(
     Output('measureButton', 'disabled'),
-    [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')]
+    [Input('%s_power_button' % PRESSURE_GAUGE.unique_id(), 'on')]
 )
 def enable_measure_btn(pwr_status):
     return not pwr_status
 
 
 @app.callback(
-    Output('%s_instr_port' % pressure_gauge.unique_id(), 'value'),
+    Output('%s_instr_port' % PRESSURE_GAUGE.unique_id(), 'value'),
     [
-        Input('%s_power_button' % pressure_gauge.unique_id(), 'on'),
+        Input('%s_power_button' % PRESSURE_GAUGE.unique_id(), 'on'),
         Input('interval', 'n_intervals')
     ],
     [
-        State('%s_instr_port' % (pressure_gauge.unique_id()), 'value'),
-        State('%s_instr_port' % (pressure_gauge.unique_id()), 'placeholder')
+        State('%s_instr_port' % (PRESSURE_GAUGE.unique_id()), 'value'),
+        State('%s_instr_port' % (PRESSURE_GAUGE.unique_id()), 'placeholder')
     ]
 )
 def instrument_port_prevent_reset(pwr_status, n_intervals, text, placeholder):
@@ -326,21 +335,20 @@ def instrument_port_prevent_reset(pwr_status, n_intervals, text, placeholder):
 
 
 @app.callback(
-    Output('%s_instr_port' % pressure_gauge.unique_id(), 'disabled'),
-    [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')],
+    Output('%s_instr_port' % PRESSURE_GAUGE.unique_id(), 'disabled'),
+    [Input('%s_power_button' % PRESSURE_GAUGE.unique_id(), 'on')],
 )
 def enable_instrument_port_input(pwr_status):
     return not pwr_status
 
 
 @app.callback(
-    Output('%s_instr_port_btn' % pressure_gauge.unique_id(), 'disabled'),
-    [Input('%s_power_button' % pressure_gauge.unique_id(), 'on')],
+    Output('%s_instr_port_btn' % PRESSURE_GAUGE.unique_id(), 'disabled'),
     [
-        State('%s_instr_port' % (pressure_gauge.unique_id()), 'value'),
-        State('%s_instr_port' % (pressure_gauge.unique_id()), 'placeholder')
+        Input('%s_power_button' % PRESSURE_GAUGE.unique_id(), 'on'),
+        Input('%s_instr_port' % (PRESSURE_GAUGE.unique_id()), 'value')
     ],
-    [Event('%s_instr_port' % pressure_gauge.unique_id(), 'change')]
+    [State('%s_instr_port' % (PRESSURE_GAUGE.unique_id()), 'placeholder')]
 )
 def instrument_port_btn_update(pwr_status, text, placeholder):
     """enable or disable the connect button depending on the port name"""
@@ -353,15 +361,14 @@ def instrument_port_btn_update(pwr_status, text, placeholder):
 
 
 @app.callback(
-    Output('%s_instr_port_btn' % pressure_gauge.unique_id(), 'n_clicks'),
-    [],
-    [State('%s_instr_port' % (pressure_gauge.unique_id()), 'value')],
-    [Event('%s_instr_port_btn' % pressure_gauge.unique_id(), 'click')]
+    Output('event-output-div', 'children'),
+    [Input('%s_instr_port_btn' % PRESSURE_GAUGE.unique_id(), 'n_clicks')],
+    [State('%s_instr_port' % (PRESSURE_GAUGE.unique_id()), 'value')]
 )
-def instrument_port_btn_click(text):
-    """reconnect the instrument to the new com port"""
-    pressure_gauge.connect(text)
-    return 0
+def instrument_port_btn_click(_, text):
+    """reconnect the instrument to the new com port, this was handeled by an Event"""
+    PRESSURE_GAUGE.connect(text)
+    return text
 
 
 @app.callback(
@@ -369,19 +376,19 @@ def instrument_port_btn_click(text):
     [
         Input('interval', 'n_intervals'),
         Input('measuring', 'value'),
-        Input('%s_channel' % (pressure_gauge.unique_id()), 'value'),
+        Input('%s_channel' % (PRESSURE_GAUGE.unique_id()), 'value'),
         Input('toggleTheme', 'value')
     ],
     [
-        State('%s_power_button' % pressure_gauge.unique_id(), 'on')
+        State('%s_power_button' % PRESSURE_GAUGE.unique_id(), 'on')
     ]
 )
 def update_graph(
-    n_interval,
-    is_measuring,
-    selected_params,
-    is_dark_theme,
-    pwr_status
+        n_interval,
+        is_measuring,
+        selected_params,
+        is_dark_theme,
+        pwr_status
 ):
 
     if is_dark_theme:
@@ -392,7 +399,7 @@ def update_graph(
     data_for_graph = []
 
     if pwr_status and is_measuring:
-        for instr in instrument_rack:
+        for instr in INSTRUMENT_RACK:
 
             # triggers the measure on the selected channels
             if is_measuring:
@@ -423,20 +430,20 @@ def update_graph(
             xaxis={
                 'type': 'date',
                 'title': 'Time',
-                'color': text_color[theme],
-                'gridcolor': grid_color[theme]
+                'color': TEXT_COLOR[theme],
+                'gridcolor': GRID_COLOR[theme]
             },
             yaxis={
                 'title': 'Pressure (mbar)',
-                'gridcolor': grid_color[theme]
+                'gridcolor': GRID_COLOR[theme]
             },
             font=dict(
-                color=text_color[theme],
+                color=TEXT_COLOR[theme],
                 size=15,
             ),
             margin={'l': 100, 'b': 100, 't': 50, 'r': 20, 'pad': 0},
-            plot_bgcolor=bkg_color[theme],
-            paper_bgcolor=bkg_color[theme]
+            plot_bgcolor=BKG_COLOR[theme],
+            paper_bgcolor=BKG_COLOR[theme]
         )
     }
 

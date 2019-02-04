@@ -256,7 +256,12 @@ class MGC4000(Instrument):
                         }
                     )
                 ],
-
+                style={
+                    'display': 'flex',
+                    'flexDirection': 'row',
+                    'alignItems': 'center',
+                    'justifyContent': 'space-between',
+                },
             )
         ]
 
