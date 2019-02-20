@@ -225,7 +225,6 @@ app.css.append_css(
 )
 
 app.config.suppress_callback_exceptions = False
-app.scripts.config.serve_locally = True
 
 # In[]:
 # Create app layout
