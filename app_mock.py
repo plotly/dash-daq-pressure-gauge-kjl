@@ -178,7 +178,7 @@ dashdaq.io](https://www.dashdaq.io/)''')
 root_layout = html.Div(
     [
         dcc.Location(id='url', refresh=False),
-        dcc.Interval(id='interval', interval=5000),
+        dcc.Interval(id='interval', interval=500),
         html.Div(
             id='header',
             children=[
@@ -406,10 +406,10 @@ def update_graph(
             for instr_chan in selected_params:
 
                 if instr.measured_data[instr_chan]:
-                    xdata = 1000 * instr.measured_data['%s_time' % instr_chan]
+                    xdata = instr.measured_data['%s_time' % instr_chan]
                     ydata = instr.measured_data[instr_chan]
                     data_for_graph.append(
-                        go.Scatter(
+                        dict(
                             x=xdata,
                             y=ydata,
                             mode='lines+markers',
