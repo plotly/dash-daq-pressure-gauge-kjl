@@ -1,8 +1,5 @@
-dash==0.36.0
-dash-html-components==0.13.4
-dash-core-components==0.42.1
+dash>=0.41.0
 dash-daq==0.1.4
-dash-renderer==0.17.0
 gunicorn
 plotly
 numpy
